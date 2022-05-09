@@ -118,20 +118,20 @@ impl ConvolutionalLayer {
 }
 
 pub struct FullyConnectedLayer {
-    input_size: usize,
-    output_size: usize,
+    input_size: na::Vector2<usize>,
+    output_size: na::Vector2<usize>,
     weights: Vec<f32>, // Stored input-major
 }
 
 impl Layer for FullyConnectedLayer {
     fn evaluate(&self, input: &[f32]) -> Vec<f32> {
-        if input.len() != self.input_size {
+        if input.len() != self.input_size.product() {
             panic!("wrong input size");
         }
 
-        let mut output = vec![0.0; self.output_size];
-        for input_i in 0..self.input_size {
-            for output_i in 0..self.output_size {
+        let mut output = vec![0.0; self.output_size.product()];
+        for input_i in 0..self.input_size.product() {
+            for output_i in 0..self.output_size.product() {
                 output[output_i] +=
                     input[input_i] * self.weights[self.weight_index(input_i, output_i)];
             }
@@ -141,26 +141,26 @@ impl Layer for FullyConnectedLayer {
     }
 
     fn set_input_size(&mut self, input_size: na::Vector2<usize>) {
-        self.input_size = input_size.product();
-        self.weights = vec![0.0; self.input_size * self.output_size];
+        self.input_size = input_size;
+        self.weights = vec![0.0; self.input_size.product() * self.output_size.product()];
     }
 
     fn output_size(&self) -> na::Vector2<usize> {
-        na::Vector2::new(self.output_size, 1)
+        self.output_size
     }
 }
 
 impl FullyConnectedLayer {
-    pub fn new(output_size: usize) -> Self {
+    pub fn new(output_size: na::Vector2<usize>) -> Self {
         Self {
-            input_size: 0,
+            input_size: na::Vector2::zeros(),
             output_size,
             weights: Vec::new(),
         }
     }
 
     fn weight_index(&self, input_i: usize, output_i: usize) -> usize {
-        input_i + self.input_size * output_i
+        input_i + self.input_size.product() * output_i
     }
 }
 
