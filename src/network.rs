@@ -24,10 +24,15 @@ impl Network {
     }
 
     pub fn evaluate(&self, input: &[f32]) -> Vec<f32> {
+        self.evaluate_and(input, |_, _| ())
+    }
+
+    pub fn evaluate_and(&self, input: &[f32], mut f: impl FnMut(&Box<dyn Layer>, &[f32])) -> Vec<f32> {
         let mut input = input;
         let mut output = Vec::new();
         for layer in self.layers.iter() {
             output = layer.evaluate(input);
+            f(layer, &output);
             input = &output;
         }
 
@@ -109,10 +114,10 @@ impl ConvolutionalLayer {
         Self {
             input_size: na::Vector2::zeros(),
             filter_size,
-            // filter_weights: vec![0.0; filter_size.product()],
-            filter_weights: std::iter::repeat_with(|| rand::random::<f32>())
-                .take(filter_size.product())
-                .collect(),
+            filter_weights: vec![0.0; filter_size.product()],
+            // filter_weights: std::iter::repeat_with(|| rand::random::<f32>())
+            //     .take(filter_size.product())
+            //     .collect(),
         }
     }
 }
