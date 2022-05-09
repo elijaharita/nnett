@@ -1,3 +1,5 @@
+use nalgebra as na;
+
 pub struct Network {
     input_size: na::Vector2<usize>,
     layers: Vec<Box<dyn Layer>>,
@@ -59,6 +61,10 @@ pub struct ConvolutionalLayer {
 
 impl Layer for ConvolutionalLayer {
     fn evaluate(&self, input: &[f32]) -> Vec<f32> {
+        if input.len() != self.input_size.product() {
+            panic!("wrong input size")
+        }
+
         let output_size = self.output_size();
 
         let mut output = vec![0.0; output_size.product()];
@@ -83,8 +89,6 @@ impl Layer for ConvolutionalLayer {
                             input[input_index] * self.filter_weights[filter_index];
                     }
                 }
-
-                output[output_index] /= self.filter_size.product() as f32;
             }
         }
 
@@ -109,6 +113,125 @@ impl ConvolutionalLayer {
             filter_weights: std::iter::repeat_with(|| rand::random::<f32>())
                 .take(filter_size.product())
                 .collect(),
+        }
+    }
+}
+
+pub struct FullyConnectedLayer {
+    input_size: usize,
+    output_size: usize,
+    weights: Vec<f32>, // Stored input-major
+}
+
+impl Layer for FullyConnectedLayer {
+    fn evaluate(&self, input: &[f32]) -> Vec<f32> {
+        if input.len() != self.input_size {
+            panic!("wrong input size");
+        }
+
+        let mut output = vec![0.0; self.output_size];
+        for input_i in 0..self.input_size {
+            for output_i in 0..self.output_size {
+                output[output_i] +=
+                    input[input_i] * self.weights[self.weight_index(input_i, output_i)];
+            }
+        }
+
+        output
+    }
+
+    fn set_input_size(&mut self, input_size: na::Vector2<usize>) {
+        self.input_size = input_size.product();
+        self.weights = vec![0.0; self.input_size * self.output_size];
+    }
+
+    fn output_size(&self) -> na::Vector2<usize> {
+        na::Vector2::new(self.output_size, 1)
+    }
+}
+
+impl FullyConnectedLayer {
+    pub fn new(output_size: usize) -> Self {
+        Self {
+            input_size: 0,
+            output_size,
+            weights: Vec::new(),
+        }
+    }
+
+    fn weight_index(&self, input_i: usize, output_i: usize) -> usize {
+        input_i + self.input_size * output_i
+    }
+}
+
+pub struct ReluLayer {
+    size: na::Vector2<usize>,
+}
+
+impl Layer for ReluLayer {
+    fn evaluate(&self, input: &[f32]) -> Vec<f32> {
+        if input.len() != self.size.product() {
+            panic!("wrong input size");
+        }
+
+        let mut output = vec![0.0; self.size.product()];
+        for i in 0..self.size.product() {
+            output[i] = input[i].max(0.0);
+        }
+
+        output
+    }
+
+    fn set_input_size(&mut self, input_size: na::Vector2<usize>) {
+        self.size = input_size;
+    }
+
+    fn output_size(&self) -> na::Vector2<usize> {
+        self.size
+    }
+}
+
+impl ReluLayer {
+    pub fn new() -> Self {
+        Self { size: na::Vector2::zeros() }
+    }
+}
+
+pub struct SoftMaxLayer {
+    size: na::Vector2<usize>,
+}
+
+impl Layer for SoftMaxLayer {
+    fn evaluate(&self, input: &[f32]) -> Vec<f32> {
+        if input.len() != self.size.product() {
+            panic!("wrong input size");
+        }
+
+        input
+            .iter()
+            .map(|&zi| {
+                std::f32::consts::E.powf(zi)
+                    / input
+                        .iter()
+                        .map(|&zj| std::f32::consts::E.powf(zj))
+                        .sum::<f32>()
+            })
+            .collect()
+    }
+
+    fn set_input_size(&mut self, input_size: na::Vector2<usize>) {
+        self.size = input_size;
+    }
+
+    fn output_size(&self) -> na::Vector2<usize> {
+        self.size
+    }
+}
+
+impl SoftMaxLayer {
+    pub fn new() -> Self {
+        Self {
+            size: na::Vector2::zeros()
         }
     }
 }
