@@ -1,7 +1,7 @@
 use std::fs::File;
 
 use eframe::{
-    egui::{panel::Side, Button, CentralPanel, Context, Image, Sense, SidePanel},
+    egui::{panel::Side, Button, CentralPanel, Context, Image, Sense, SidePanel, Label},
     epaint::{vec2, AlphaImage, ColorImage, ImageData, TextureHandle, TextureId},
     epi::{App, Frame, Storage},
     NativeOptions,
@@ -78,6 +78,7 @@ impl App for NetworkApp {
 
     fn update(&mut self, ctx: &Context, frame: &Frame) {
         let curr_image = &self.images[self.curr_image_index];
+        let curr_label = self.labels[self.curr_image_index];
         self.input_texture = Some(load_image_to_texture(ctx, curr_image));
 
         self.layer_textures = Vec::new();
@@ -105,6 +106,14 @@ impl App for NetworkApp {
             }
         );
 
+        // Calculate expected output (1.0 at the index of the expected number)
+        let mut expected_output = vec![0.0; output.len()];
+        expected_output[curr_label as usize] = 1.0;
+
+        // Calculate error: sum of the squares of all the differences between
+        // output and expected output
+        let cost: f32 = output.iter().zip(expected_output).map(|(o, eo)| (o - eo) * (o - eo)).sum();
+
         let output_size = self.network.output_size();
 
         CentralPanel::default().show(ctx, |ui| {
@@ -114,6 +123,8 @@ impl App for NetworkApp {
             {
                 self.curr_image_index += 1;
             }
+
+            ui.add(Label::new(format!("cost: {}", cost)));
 
             if let Some(input_texture) = &self.input_texture {
                 ui.add(Image::new(input_texture, vec2(56.0, 56.0)));
