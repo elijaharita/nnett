@@ -193,7 +193,9 @@ impl Layer for ReluLayer {
 
 impl ReluLayer {
     pub fn new() -> Self {
-        Self { size: na::Vector2::zeros() }
+        Self {
+            size: na::Vector2::zeros(),
+        }
     }
 }
 
@@ -207,15 +209,14 @@ impl Layer for SoftMaxLayer {
             panic!("wrong input size");
         }
 
+        let quotient = input
+            .iter()
+            .map(|&zj| std::f32::consts::E.powf(zj))
+            .sum::<f32>();
+
         input
             .iter()
-            .map(|&zi| {
-                std::f32::consts::E.powf(zi)
-                    / input
-                        .iter()
-                        .map(|&zj| std::f32::consts::E.powf(zj))
-                        .sum::<f32>()
-            })
+            .map(|&zi| std::f32::consts::E.powf(zi) / quotient)
             .collect()
     }
 
@@ -231,7 +232,7 @@ impl Layer for SoftMaxLayer {
 impl SoftMaxLayer {
     pub fn new() -> Self {
         Self {
-            size: na::Vector2::zeros()
+            size: na::Vector2::zeros(),
         }
     }
 }
